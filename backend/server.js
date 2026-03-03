@@ -185,21 +185,32 @@ app.put("/variable-group/:project/:groupId", async (req, res) => {
 ============================================================ */
 app.post("/pipeline", async (req, res) => {
   try {
-    const { project, pipelineName, repoId, repoName, yamlPath } =
+    const { project, pipelineName, repoId, repoName, yamlPath, repoType, serviceConnectionId } =
       req.body;
 
     const url = `https://dev.azure.com/${org}/${project}/_apis/pipelines?api-version=7.0`;
+
+    const isGitHub = repoType === "gitHub";
+
+    const repository = isGitHub
+      ? {
+          id: repoName,           // GitHub: "owner/repo"
+          name: repoName,
+          type: "gitHub",
+          connectedServiceId: serviceConnectionId,
+        }
+      : {
+          id: repoId,
+          name: repoName,
+          type: "azureReposGit",
+        };
 
     const body = {
       name: pipelineName,
       configuration: {
         type: "yaml",
         path: yamlPath || "/azure-pipelines.yml",
-        repository: {
-          id: repoId,
-          name: repoName,
-          type: "azureReposGit",
-        },
+        repository,
       },
     };
 

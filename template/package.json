@@ -1,0 +1,7 @@
+{
+  "name": "react-template",
+  "private": true,
+  "scripts": {
+    "build": "mkdir build && echo '<h1>Production Deployment</h1>' > build/index.html"
+  }
+}

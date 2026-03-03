@@ -1,0 +1,22 @@
+trigger: none
+
+parameters:
+  - name: projectName
+    type: string
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+  - script: |
+      cd template
+      npm install
+      npm run build
+    displayName: "Build Template"
+
+  - script: |
+      curl -X POST https://api.vercel.com/v13/deployments \
+        -H "Authorization: Bearer $(VERCEL_TOKEN)" \
+        -H "Content-Type: application/json" \
+        -d '{"name": "${{ parameters.projectName }}", "gitSource": {"repoId": "$(Build.Repository.ID)", "ref": "$(Build.SourceBranch)"}}'
+    displayName: "Deploy to Vercel"

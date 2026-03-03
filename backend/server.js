@@ -63,6 +63,61 @@ const azureRequest = async (url, method = "GET", body = null) => {
 /* ============================================================
    1️⃣ List Projects
 ============================================================ */
+/* ============================================================
+   0️⃣ Create Project
+============================================================ */
+app.post("/project", async (req, res) => {
+  try {
+    const { projectName, description, visibility = "private" } = req.body;
+
+    const url = `https://dev.azure.com/${org}/_apis/projects?api-version=7.0`;
+
+    const body = {
+      name: projectName,
+      description: description || "",
+      visibility,
+      capabilities: {
+        versioncontrol: { sourceControlType: "Git" },
+        processTemplate: {
+          templateTypeId: "6b724908-ef14-45cf-84f8-768b5384da45", // Agile
+        },
+      },
+    };
+
+    const data = await azureRequest(url, "POST", body);
+
+    res.json({
+      message: "Project creation started",
+      operationId: data.id,
+      status: data.status,
+      url: data.url,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ============================================================
+   0️⃣b Check Project Creation Status
+============================================================ */
+app.get("/project-status/:operationId", async (req, res) => {
+  try {
+    const { operationId } = req.params;
+
+    const url = `https://dev.azure.com/${org}/_apis/operations/${operationId}?api-version=7.0`;
+
+    const data = await azureRequest(url);
+
+    res.json({
+      operationId,
+      status: data.status,       // notSet | queued | inProgress | cancelled | succeeded | failed
+      resultMessage: data.resultMessage || null,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get("/projects", async (req, res) => {
   try {
     const url = `https://dev.azure.com/${org}/_apis/projects?api-version=7.0`;

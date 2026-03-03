@@ -9,6 +9,8 @@ function App() {
   const [parameters, setParameters] = useState("{}");
   const [variables, setVariables] = useState("{}");
   const [pipelineId, setPipelineId] = useState("");
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newProjectDesc, setNewProjectDesc] = useState("");
   const [loading, setLoading] = useState(false);
 
   const API = process.env.REACT_APP_API_URL || "http://localhost:5000";
@@ -36,6 +38,39 @@ function App() {
         setRepos(data.value || []);
       });
   }, [selectedProject]);
+
+  /* ---------------------------
+     Create Project
+  ----------------------------*/
+  const createProject = async () => {
+    if (!newProjectName) {
+      alert("Please enter a project name");
+      return;
+    }
+
+    setLoading(true);
+
+    const response = await fetch(`${API}/project`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        projectName: newProjectName,
+        description: newProjectDesc,
+        visibility: "private",
+      }),
+    });
+
+    const data = await response.json();
+    setLoading(false);
+
+    if (data.operationId) {
+      alert(`Project creation started!\nOperation ID: ${data.operationId}\nStatus: ${data.status}`);
+      setNewProjectName("");
+      setNewProjectDesc("");
+    } else {
+      alert("Error: " + (data.error || "Unknown error"));
+    }
+  };
 
   /* ---------------------------
      Create Pipeline
@@ -121,6 +156,30 @@ function App() {
   return (
     <div style={{ padding: 40, fontFamily: "Arial" }}>
       <h2> Internal DevOps Automation Platform </h2>
+
+      {/* Create Project */}
+      <div style={{ marginBottom: 30, padding: 20, border: "1px solid #ddd", borderRadius: 6 }}>
+        <h3 style={{ marginTop: 0 }}>Create New Project</h3>
+        <div>
+          <input
+            placeholder="Project Name"
+            value={newProjectName}
+            onChange={(e) => setNewProjectName(e.target.value)}
+          />
+        </div>
+        <div style={{ marginTop: 10 }}>
+          <input
+            placeholder="Description (optional)"
+            value={newProjectDesc}
+            onChange={(e) => setNewProjectDesc(e.target.value)}
+          />
+        </div>
+        <div style={{ marginTop: 10 }}>
+          <button onClick={createProject} disabled={loading}>
+            Create Project
+          </button>
+        </div>
+      </div>
 
       {/* Project Selection */}
       <div>

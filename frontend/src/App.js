@@ -6,7 +6,7 @@ function App() {
   const [selectedProject, setSelectedProject] = useState("");
   const [selectedRepo, setSelectedRepo] = useState("");
   const [pipelineName, setPipelineName] = useState("");
-  const [parameters, setParameters] = useState('{"projectName": ""}');
+  const [parameters, setParameters] = useState("{}");
   const [variables, setVariables] = useState("{}");
   const [pipelineId, setPipelineId] = useState("");
   const [loading, setLoading] = useState(false);

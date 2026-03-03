@@ -1,0 +1,14 @@
+{
+  "name": "internal-deployer",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "start:frontend": "npm run start --workspace=frontend",
+    "start:backend": "node backend/server.js",
+    "build:frontend": "npm run build --workspace=frontend",
+    "install:all": "npm install --workspaces"
+  }
+}

@@ -16,8 +16,7 @@ const port = process.env.PORT || 5000;
 console.log("🚀 Starting Azure DevOps Automation Server...", { org, port });
 
 if (!org || !pat) {
-  console.error("❌ Missing AZURE_ORG or AZURE_PAT in .env");
-  process.exit(1);
+  console.error("❌ Missing AZURE_ORG or AZURE_PAT in environment");
 }
 
 const authHeader =

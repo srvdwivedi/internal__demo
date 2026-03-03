@@ -1,22 +1,105 @@
-trigger: none
-
-parameters:
-  - name: projectName
-    type: string
+trigger:
+  branches:
+    include:
+      - main
 
 pool:
   vmImage: 'ubuntu-latest'
 
-steps:
-  - script: |
-      cd template
-      npm install
-      npm run build
-    displayName: "Build Template"
+variables:
+  VERCEL_ORG_ID: $(VERCEL_ORG_ID)
+  VERCEL_FRONTEND_PROJECT_ID: $(VERCEL_FRONTEND_PROJECT_ID)
+  VERCEL_BACKEND_PROJECT_ID: $(VERCEL_BACKEND_PROJECT_ID)
 
-  - script: |
-      curl -X POST https://api.vercel.com/v13/deployments \
-        -H "Authorization: Bearer $(VERCEL_TOKEN)" \
-        -H "Content-Type: application/json" \
-        -d '{"name": "${{ parameters.projectName }}", "gitSource": {"repoId": "$(Build.Repository.ID)", "ref": "$(Build.SourceBranch)"}}'
-    displayName: "Deploy to Vercel"
+stages:
+
+  # ─────────────────────────────────────────
+  # Stage 1: Build Frontend
+  # ─────────────────────────────────────────
+  - stage: BuildFrontend
+    displayName: 'Build Frontend'
+    jobs:
+      - job: Build
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '18.x'
+            displayName: 'Use Node 18'
+
+          - script: |
+              cd frontend
+              npm install
+              npm run build
+            displayName: 'Install & Build React App'
+            env:
+              REACT_APP_API_URL: $(REACT_APP_API_URL)
+
+          - publish: frontend/build
+            artifact: frontend-build
+            displayName: 'Publish Frontend Artifact'
+
+  # ─────────────────────────────────────────
+  # Stage 2: Build Backend
+  # ─────────────────────────────────────────
+  - stage: BuildBackend
+    displayName: 'Build Backend'
+    dependsOn: []
+    jobs:
+      - job: Build
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '18.x'
+            displayName: 'Use Node 18'
+
+          - script: |
+              cd backend
+              npm install
+            displayName: 'Install Backend Dependencies'
+
+          - publish: backend
+            artifact: backend-build
+            displayName: 'Publish Backend Artifact'
+
+  # ─────────────────────────────────────────
+  # Stage 3: Deploy to Vercel
+  # ─────────────────────────────────────────
+  - stage: Deploy
+    displayName: 'Deploy to Vercel'
+    dependsOn:
+      - BuildFrontend
+      - BuildBackend
+    jobs:
+      - job: DeployFrontend
+        displayName: 'Deploy Frontend'
+        steps:
+          - download: current
+            artifact: frontend-build
+
+          - script: npm install -g vercel
+            displayName: 'Install Vercel CLI'
+
+          - script: |
+              vercel pull --yes --environment=production \
+                --token=$(VERCEL_TOKEN)
+              vercel build --prod --token=$(VERCEL_TOKEN)
+              vercel deploy --prebuilt --prod --token=$(VERCEL_TOKEN)
+            displayName: 'Deploy Frontend to Vercel'
+            workingDirectory: frontend
+
+      - job: DeployBackend
+        displayName: 'Deploy Backend'
+        steps:
+          - download: current
+            artifact: backend-build
+
+          - script: npm install -g vercel
+            displayName: 'Install Vercel CLI'
+
+          - script: |
+              vercel pull --yes --environment=production \
+                --token=$(VERCEL_TOKEN)
+              vercel build --prod --token=$(VERCEL_TOKEN)
+              vercel deploy --prebuilt --prod --token=$(VERCEL_TOKEN)
+            displayName: 'Deploy Backend to Vercel'
+            workingDirectory: backend

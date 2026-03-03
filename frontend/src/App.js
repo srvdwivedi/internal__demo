@@ -6,6 +6,7 @@ function App() {
   const [selectedProject, setSelectedProject] = useState("");
   const [selectedRepo, setSelectedRepo] = useState("");
   const [pipelineName, setPipelineName] = useState("");
+  const [parameters, setParameters] = useState('{"projectName": ""}');
   const [variables, setVariables] = useState("{}");
   const [pipelineId, setPipelineId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -83,7 +84,17 @@ function App() {
 
     setLoading(true);
 
+    let parsedParameters = {};
     let parsedVariables = {};
+
+    try {
+      parsedParameters = JSON.parse(parameters);
+    } catch {
+      alert("Invalid JSON for parameters");
+      setLoading(false);
+      return;
+    }
+
     try {
       parsedVariables = JSON.parse(variables);
     } catch {
@@ -98,6 +109,7 @@ function App() {
       body: JSON.stringify({
         project: selectedProject,
         pipelineId,
+        parameters: parsedParameters,
         variables: parsedVariables,
       }),
     });
@@ -151,12 +163,34 @@ function App() {
         />
       </div>
 
+      {/* Pipeline ID (for deploying existing pipelines) */}
+      <div style={{ marginTop: 15 }}>
+        <input
+          placeholder="Pipeline ID (e.g. 6)"
+          value={pipelineId}
+          onChange={(e) => setPipelineId(e.target.value)}
+        />
+      </div>
+
+      {/* Parameters (templateParameters) */}
+      <div style={{ marginTop: 15 }}>
+        <div style={{ marginBottom: 4, fontWeight: "bold" }}>Parameters (YAML template params):</div>
+        <textarea
+          rows="4"
+          cols="50"
+          placeholder='e.g. {"projectName": "my-app"}'
+          value={parameters}
+          onChange={(e) => setParameters(e.target.value)}
+        />
+      </div>
+
       {/* Variables */}
       <div style={{ marginTop: 15 }}>
+        <div style={{ marginBottom: 4, fontWeight: "bold" }}>Variables (runtime):</div>
         <textarea
-          rows="6"
+          rows="4"
           cols="50"
-          placeholder='Variables JSON (example: {"ENV":{"value":"prod"}})'
+          placeholder='e.g. {"ENV": {"value": "prod"}}'
           value={variables}
           onChange={(e) => setVariables(e.target.value)}
         />

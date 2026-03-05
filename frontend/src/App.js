@@ -368,7 +368,14 @@ function App() {
       return;
     }
     try {
-      parsedVariables = JSON.parse(variables);
+      const rawVariables = JSON.parse(variables);
+      // Auto-wrap flat values into { value: "..." } format required by Azure DevOps API
+      parsedVariables = Object.fromEntries(
+        Object.entries(rawVariables).map(([k, v]) => [
+          k,
+          typeof v === "object" && v !== null && "value" in v ? v : { value: String(v) },
+        ])
+      );
     } catch {
       showToast("Invalid JSON in Variables field", true);
       return;

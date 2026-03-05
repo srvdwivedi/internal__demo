@@ -1,19 +1,109 @@
-trigger: none
+# ============================================================
+# Azure Pipelines - Generic React Deployment Template
+# Supports: Vercel deployment
+# Repo sources: Azure Repos, GitHub, Bitbucket
+# ============================================================
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    exclude:
+      - "*.md"
 
 parameters:
   - name: projectName
     type: string
+    displayName: "Project / App Name"
+
+  - name: nodeVersion
+    type: string
+    default: "18.x"
+    displayName: "Node.js Version"
+    values:
+      - "16.x"
+      - "18.x"
+      - "20.x"
+
+  - name: workingDirectory
+    type: string
+    default: "."
+    displayName: "Working Directory (relative to repo root)"
+
+  - name: buildCommand
+    type: string
+    default: "npm run build"
+    displayName: "Build Command"
+
+  - name: environment
+    type: string
+    default: "production"
+    displayName: "Target Environment"
+    values:
+      - "development"
+      - "preview"
+      - "production"
+
+variables:
+  - group: DeploySecrets   # Must contain: VERCEL_TOKEN
+  - name: BUILD_DIR
+    value: "${{ parameters.workingDirectory }}"
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: "ubuntu-latest"
 
-steps:
-  - script: |
-      cd template
-      npm install
-      npm run build
-    displayName: "Build Template"
+stages:
+  # ── Stage 1: Build ──────────────────────────────────────
+  - stage: Build
+    displayName: "Build"
+    jobs:
+      - job: BuildApp
+        displayName: "Install & Build"
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: "${{ parameters.nodeVersion }}"
+            displayName: "Use Node.js ${{ parameters.nodeVersion }}"
 
-  - script: |
-      curl -X POST https://api.vercel.com/v13/deployments         -H "Authorization: Bearer $(VERCEL_TOKEN)"         -H "Content-Type: application/json"         -d '{"name": "${{ parameters.projectName }}"}'
-    displayName: "Deploy to Vercel via API"
+          - script: |
+              cd "${{ parameters.workingDirectory }}"
+              npm ci
+            displayName: "Install Dependencies"
+
+          - script: |
+              cd "${{ parameters.workingDirectory }}"
+              ${{ parameters.buildCommand }}
+            displayName: "Build"
+            env:
+              NODE_ENV: production
+
+          - publish: "${{ parameters.workingDirectory }}/build"
+            artifact: build-output
+            displayName: "Publish Build Artifact"
+
+  # ── Stage 2: Deploy ─────────────────────────────────────
+  - stage: Deploy
+    displayName: "Deploy to Vercel"
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+      - job: DeployVercel
+        displayName: "Deploy"
+        steps:
+          - download: current
+            artifact: build-output
+            displayName: "Download Build Artifact"
+
+          - script: npm install -g vercel
+            displayName: "Install Vercel CLI"
+
+          - script: |
+              vercel \
+                --token $(VERCEL_TOKEN) \
+                --name "${{ parameters.projectName }}" \
+                --target ${{ parameters.environment }} \
+                --yes \
+                $(Pipeline.Workspace)/build-output
+            displayName: "Deploy to Vercel (${{ parameters.environment }})"

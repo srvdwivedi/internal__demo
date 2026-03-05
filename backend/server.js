@@ -246,19 +246,30 @@ app.post("/pipeline", async (req, res) => {
     const url = `https://dev.azure.com/${org}/${project}/_apis/pipelines?api-version=7.0`;
 
     const isGitHub = repoType === "gitHub";
+    const isBitbucket = repoType === "bitbucket";
 
-    const repository = isGitHub
-      ? {
-          id: repoName,           // GitHub: "owner/repo"
-          name: repoName,
-          type: "gitHub",
-          connectedServiceId: serviceConnectionId,
-        }
-      : {
-          id: repoId,
-          name: repoName,
-          type: "azureReposGit",
-        };
+    let repository;
+    if (isGitHub) {
+      repository = {
+        id: repoName,           // GitHub: "owner/repo"
+        name: repoName,
+        type: "gitHub",
+        connectedServiceId: serviceConnectionId,
+      };
+    } else if (isBitbucket) {
+      repository = {
+        id: repoName,           // Bitbucket: "workspace/repo-slug"
+        name: repoName,
+        type: "bitbucket",
+        connectedServiceId: serviceConnectionId,
+      };
+    } else {
+      repository = {
+        id: repoId,
+        name: repoName,
+        type: "azureReposGit",
+      };
+    }
 
     const body = {
       name: pipelineName,
